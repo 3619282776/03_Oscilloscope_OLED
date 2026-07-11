@@ -20,6 +20,8 @@
 #include "main.h" 
 #include "ssd1306.h"
 #include "ssd1306_fonts.h"
+#include "stm32f1xx_hal.h"
+#include <stdint.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -100,15 +102,38 @@ int main(void)
   MX_TIM1_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
-  char temp[]="nmsl";
-  ssd1306_SetCursor(0, 0);
-  ssd1306_WriteString(temp, Font_7x10, White); 
+  //初始化oled屏幕，设置光标位置
+    ssd1306_Init();
+    ssd1306_SetCursor(0, 0);
+
   /* USER CODE END 2 */
+  ssd1306_Fill(Black);
+  ssd1306_DrawPixel(10, 10, White);
+  ssd1306_UpdateScreen();
+
+
+
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  uint8_t wave[128];
+
+    for(int x=0;x<128;x++)
+    {
+        wave[x]=30;
+        if(x>20 && x<40)
+            wave[x]=10;
+        if(x>40 && x<60)
+            wave[x]=50;
+    }
+    
+
   while (1)
-  {
+  { 
+    for (uint8_t x=0; x<127; x++) {
+    ssd1306_Line(x,wave[x], x+1, wave[x+1], White);
+    ssd1306_UpdateScreen();
+    }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
