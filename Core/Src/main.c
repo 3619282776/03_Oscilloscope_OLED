@@ -128,6 +128,8 @@ int main(void)
       for (uint16_t x=1; x<128; x++) {
         ssd1306_Line(x-1, adc_value[x-1], x, adc_value[x], White);
       }
+      ssd1306_Line(0, 31, 127, 31, White);
+      ssd1306_Line(63, 0, 63, 63, White);
         ssd1306_UpdateScreen();
         ssd1306_Fill(Black);
         isDraw=0;
