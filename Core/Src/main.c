@@ -27,6 +27,7 @@
 #include "stm32f1xx_hal_gpio.h"
 #include "stm32f1xx_hal_tim.h"
 #include <stdint.h>
+#include <stdio.h>
 #include <sys/types.h>
 /* USER CODE END Includes */
 
@@ -57,6 +58,8 @@ TIM_HandleTypeDef htim2;
  volatile uint16_t adc_value[128];
  volatile uint16_t count=0;
  volatile u_int8_t isDraw=0;
+ char VCC[16]={};
+ volatile u_int8_t TRIGGER_FLAG=0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -410,9 +413,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
     if(htim->Instance == TIM1&&isDraw==0)
     {
-    
     adc_value[count]=hadc1.Instance->DR;
     adc_value[count]=63-(adc_value[count]*63/4095);
+    if (adc_value[0]<60) return;
     count++;
     if (count==128) {
     count=0;
