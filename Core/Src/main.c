@@ -57,6 +57,18 @@ TIM_HandleTypeDef htim2;
  volatile uint16_t adc_value[128];
  volatile uint16_t count=0;
  volatile u_int8_t isDraw=0;
+ volatile uint32_t key_time=0;
+ volatile uint8_t freq_index = 2;
+ typedef  struct {
+  uint16_t psc;
+  uint16_t arr;
+ }FreqConfig_t;
+ const FreqConfig_t freq_table[]={
+    {7199, 99},   // 100 Hz
+    {7199, 19},   // 500 Hz
+    {7199, 9},    // 1 kHz
+    {3599, 9}     // 2 kHz
+ };
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -137,9 +149,9 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-  }
 }
   /* USER CODE END 3 */
+}
 
 /**
   * @brief System Clock Configuration
@@ -292,7 +304,7 @@ static void MX_TIM1_Init(void)
   htim1.Init.Period = 9;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
-  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
   {
     Error_Handler();
@@ -334,7 +346,7 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 719;
+  htim2.Init.Prescaler = 710;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 999;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -359,7 +371,7 @@ static void MX_TIM2_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 100;
+  sConfigOC.Pulse = 500;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
@@ -401,6 +413,16 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : PA8 */
+  GPIO_InitStruct.Pin = GPIO_PIN_8;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
   /* USER CODE END MX_GPIO_Init_2 */
@@ -409,7 +431,6 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-
     if(htim->Instance == TIM1&&isDraw==0)
     {
     
@@ -420,6 +441,30 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     count=0;
     isDraw=1;
     }
+    }
+}
+
+
+
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+    if(GPIO_Pin == GPIO_PIN_8)
+    {
+        uint32_t tick=HAL_GetTick();
+        if (tick-key_time>30) {
+            freq_index++;
+            if (freq_index >= 4) freq_index = 0;
+
+            // 停止定时器，更新参数
+            HAL_TIM_Base_Stop_IT(&htim1);
+            __HAL_TIM_SET_PRESCALER(&htim1, freq_table[freq_index].psc);
+            __HAL_TIM_SET_AUTORELOAD(&htim1, freq_table[freq_index].arr);
+            // 产生更新事件，使新值立即生效
+            htim1.Instance->EGR = TIM_EGR_UG;
+            HAL_TIM_Base_Start_IT(&htim1);
+        }
+        key_time=tick;
     }
 }
 /* USER CODE END 4 */
